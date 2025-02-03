@@ -5,78 +5,149 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Real Estate Chatbot</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
 </head>
 <body>
     <div class="container">
         <div class="chatbot">
             <div class="header">
                 <img src="{{ url_for('static', filename='chaticon.png') }}" alt="Chatbot Logo" class="chat-icon">
-                Real Estate Chatbot
+                <span class="header-text">Real Estate Chatbot</span>
+                <button class="toggle-mode-btn" onclick="toggleDarkMode()">🌙</button>
             </div>            
+
+            <div id="welcome-message" class="welcome-message"></div>
+
             <div id="messages"></div>
+
+            <div id="chatbot-thinking" class="chatbot-thinking">
+                <img src="{{ url_for('static', filename='chatbot-avatar.png') }}" class="floating-avatar" alt="Chatbot Thinking">
+                <div class="typing-indicator">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+
             <div class="input-area">
-                <input type="text" id="user-input" placeholder="Type a message..." />
+                <input type="text" id="user-input" placeholder="Type a message..." onkeypress="handleKeyPress(event)" />
                 <button onclick="sendMessage()">Send</button>
             </div>
         </div>
+        
+        <footer>
+            <p>© 2025 Real Estate Chatbot. All rights reserved.</p>
+            <p><a href="#">Privacy Policy</a> | <a href="#">Terms of Service</a></p>
+        </footer>
     </div>
+
     <script>
+        function scrollToBottom() {
+            const messagesDiv = document.getElementById("messages");
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === "Enter") {
+                sendMessage();
+            }
+        }
+
         async function sendMessage() {
             const userInput = document.getElementById("user-input").value.trim();
             if (!userInput) return;
 
             const messagesDiv = document.getElementById("messages");
+            const chatbotThinking = document.getElementById("chatbot-thinking");
 
-            // Display user message
             const userMessageDiv = document.createElement("div");
-            userMessageDiv.className = "message user-message";
+            userMessageDiv.className = "user-message";
             userMessageDiv.textContent = userInput;
             messagesDiv.appendChild(userMessageDiv);
 
-            // Clear input
-            document.getElementById("user-input").value = "";
+            scrollToBottom();
 
-            // Add typing indicator
-            const typingDiv = document.createElement("div");
-            typingDiv.className = "typing-indicator";
-            typingDiv.textContent = "Bot is typing...";
-            messagesDiv.appendChild(typingDiv);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            document.getElementById("user-input").value = "";
+            chatbotThinking.style.display = "flex";
+
+            await new Promise(resolve => setTimeout(resolve, 3000));
 
             try {
-                // Send request to the backend
                 const response = await fetch("http://127.0.0.1:5000/chat", {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ message: userInput }),
                 });
 
-                if (!response.ok) {
-                    throw new Error("Failed to fetch response from the backend.");
-                }
-
+                if (!response.ok) throw new Error("Failed to fetch response from the backend.");
                 const data = await response.json();
 
-                // Remove typing indicator
-                messagesDiv.removeChild(typingDiv);
+                chatbotThinking.style.display = "none";
 
-                // Display bot response
-                const botMessageDiv = document.createElement("div");
-                botMessageDiv.className = "message bot-message";
-                botMessageDiv.textContent = data.response;
-                messagesDiv.appendChild(botMessageDiv);
+                // **Show Processed Query**
+                if (data.processed_query) {
+                    const processedQueryDiv = document.createElement("div");
+                    processedQueryDiv.className = "bot-message processed-query";
+                    processedQueryDiv.innerHTML = `<strong>Processed Query:</strong> ${data.processed_query}`;
+                    messagesDiv.appendChild(processedQueryDiv);
+                }
 
-                // Scroll to the bottom
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                // **Show Main Response**
+                if (data.response) {
+                    const botMessageDiv = document.createElement("div");
+                    botMessageDiv.className = "bot-message markdown-output";
+                    botMessageDiv.innerHTML = formatMarkdown(data.response);
+                    messagesDiv.appendChild(botMessageDiv);
+                }
+
+                // **Show References**
+                if (data.references && data.references.trim() !== "") {
+                    let cleanedReferences = data.references.replace(/References:\s*\*\*/i, "<strong>References:</strong>").trim();
+
+                    const referenceDiv = document.createElement("div");
+                    referenceDiv.className = "bot-message markdown-output";
+                    referenceDiv.innerHTML = formatMarkdown(cleanedReferences);
+
+                    // **Ensure links open in a new tab**
+                    const links = referenceDiv.getElementsByTagName("a");
+                    for (let link of links) {
+                        link.setAttribute("target", "_blank");
+                        link.setAttribute("rel", "noopener noreferrer");
+                    }
+
+                    messagesDiv.appendChild(referenceDiv);
+                }
+
+                scrollToBottom();
             } catch (error) {
                 console.error("Error communicating with backend:", error);
-                messagesDiv.removeChild(typingDiv);
+                chatbotThinking.style.display = "none";
                 const errorMessageDiv = document.createElement("div");
-                errorMessageDiv.className = "message bot-message";
+                errorMessageDiv.className = "bot-message";
                 errorMessageDiv.textContent = "Error: Could not connect to backend.";
                 messagesDiv.appendChild(errorMessageDiv);
+
+                scrollToBottom();
+            }
+        }
+
+        function formatMarkdown(text) {
+            if (!text || text.trim() === "") return "<p>Error: No response received.</p>";
+
+            let parsedText = marked.parse(text);
+
+            // Ensure all links open in a new tab
+            parsedText = parsedText.replace(/<a /g, '<a target="_blank" rel="noopener noreferrer" ');
+
+            return DOMPurify.sanitize(parsedText);
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle("dark-mode");
+            const modeBtn = document.querySelector(".toggle-mode-btn");
+            if (document.body.classList.contains("dark-mode")) {
+                modeBtn.textContent = "☀️";
+            } else {
+                modeBtn.textContent = "🌙";
             }
         }
     </script>
