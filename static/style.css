@@ -339,3 +339,43 @@ body.dark-mode {
     50% { transform: translateY(-8px); }
     100% { transform: translateY(0px); }
 }
+
+/* Blinking Cursor */
+.blinking-cursor {
+    display: inline-block;
+    font-weight: bold;
+    font-size: 18px;
+    animation: blinkCursor 1s infinite;
+}
+
+@keyframes blinkCursor {
+    0% { opacity: 1; }
+    50% { opacity: 0; }
+    100% { opacity: 1; }
+}
+
+/* Fix for Dark Mode Toggle Button */
+.toggle-mode-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    margin-left: auto;
+    padding: 5px;
+    transition: color 0.3s ease-in-out;
+}
+
+.toggle-mode-btn:hover {
+    opacity: 0.8;
+    background: none; /* Removes unwanted box */
+}
+/* Make links readable in dark mode */
+.dark-mode a {
+    color: #4fa3ff; /* Light blue for contrast */
+}
+
+.dark-mode a:hover {
+    color: #66c2ff; /* Lighter blue when hovered */
+    text-decoration: underline;
+}

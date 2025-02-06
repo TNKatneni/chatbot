@@ -41,20 +41,79 @@
     </div>
 
     <script>
-        function scrollToBottom() {
-            const messagesDiv = document.getElementById("messages");
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        let welcomeAnimationActive = true;
+        let typingTimeouts = [];
+
+        const welcomeMessages = [
+            "Initializing...",
+            "Setting up real estate insights...",
+            "Welcome! I'm Homi, your AI real estate expert!"
+        ];
+
+        function typeEffect(element, text, index = 0, callback) {
+            if (!welcomeAnimationActive) return;
+
+            if (index < text.length) {
+                element.innerHTML = text.substring(0, index + 1) + '<span class="blinking-cursor">|</span>';
+                typingTimeouts.push(setTimeout(() => typeEffect(element, text, index + 1, callback), 70));
+            } else {
+                if (callback) typingTimeouts.push(setTimeout(callback, 1000));
+            }
+        }
+
+        function clearTextEffect(element, callback) {
+            const text = element.innerText.replace("|", "");
+            if (text.length > 0) {
+                element.innerHTML = text.substring(0, text.length - 1) + '<span class="blinking-cursor">|</span>';
+                typingTimeouts.push(setTimeout(() => clearTextEffect(element, callback), 40));
+            } else {
+                if (callback) callback();
+            }
+        }
+
+        function runWelcomeAnimation() {
+            const welcomeElement = document.getElementById("welcome-message");
+            let step = 0;
+
+            function nextStep() {
+                if (step < welcomeMessages.length && welcomeAnimationActive) {
+                    typeEffect(welcomeElement, welcomeMessages[step], 0, () => {
+                        if (step === welcomeMessages.length - 1) {
+                            welcomeElement.innerHTML = welcomeMessages[step] + '<span class="blinking-cursor">|</span>';
+                        } else {
+                            setTimeout(() => clearTextEffect(welcomeElement, () => {
+                                step++;
+                                nextStep();
+                            }), 1000);
+                        }
+                    });
+                }
+            }
+            nextStep();
+        }
+
+        function stopWelcomeAnimation() {
+            welcomeAnimationActive = false;
+            typingTimeouts.forEach(timeout => clearTimeout(timeout));
+            document.getElementById("welcome-message").innerHTML = "";
         }
 
         function handleKeyPress(event) {
             if (event.key === "Enter") {
+                stopWelcomeAnimation();
                 sendMessage();
             }
         }
 
+        window.onload = function () {
+            runWelcomeAnimation();
+        };
+
         async function sendMessage() {
             const userInput = document.getElementById("user-input").value.trim();
             if (!userInput) return;
+
+            stopWelcomeAnimation();
 
             const messagesDiv = document.getElementById("messages");
             const chatbotThinking = document.getElementById("chatbot-thinking");
@@ -69,10 +128,8 @@
             document.getElementById("user-input").value = "";
             chatbotThinking.style.display = "flex";
 
-            await new Promise(resolve => setTimeout(resolve, 3000));
-
             try {
-                const response = await fetch("http://127.0.0.1:5000/chat", {
+                const response = await fetch("/chat", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ message: userInput }),
@@ -83,7 +140,7 @@
 
                 chatbotThinking.style.display = "none";
 
-                // **Show Processed Query**
+                // Display Processed Query if available
                 if (data.processed_query) {
                     const processedQueryDiv = document.createElement("div");
                     processedQueryDiv.className = "bot-message processed-query";
@@ -91,7 +148,7 @@
                     messagesDiv.appendChild(processedQueryDiv);
                 }
 
-                // **Show Main Response**
+                // Display Main Response
                 if (data.response) {
                     const botMessageDiv = document.createElement("div");
                     botMessageDiv.className = "bot-message markdown-output";
@@ -99,22 +156,25 @@
                     messagesDiv.appendChild(botMessageDiv);
                 }
 
-                // **Show References**
+                // Fix References Formatting
                 if (data.references && data.references.trim() !== "") {
-                    let cleanedReferences = data.references.replace(/References:\s*\*\*/i, "<strong>References:</strong>").trim();
+                    let cleanedReferences = data.references
+                        .replace(/\*\*References:\*\*/gi, "<strong>References:</strong>") // Fix "References:**"
+                        .replace(/References:\s*\*\*/gi, "<strong>References:</strong>") // Additional safety check
+                        .trim();
 
-                    const referenceDiv = document.createElement("div");
-                    referenceDiv.className = "bot-message markdown-output";
-                    referenceDiv.innerHTML = formatMarkdown(cleanedReferences);
+                    const referencesDiv = document.createElement("div");
+                    referencesDiv.className = "bot-message markdown-output";
+                    referencesDiv.innerHTML = formatMarkdown(cleanedReferences);
 
-                    // **Ensure links open in a new tab**
-                    const links = referenceDiv.getElementsByTagName("a");
+                    // Ensure links open in a new tab
+                    const links = referencesDiv.getElementsByTagName("a");
                     for (let link of links) {
                         link.setAttribute("target", "_blank");
                         link.setAttribute("rel", "noopener noreferrer");
                     }
 
-                    messagesDiv.appendChild(referenceDiv);
+                    messagesDiv.appendChild(referencesDiv);
                 }
 
                 scrollToBottom();
@@ -125,30 +185,26 @@
                 errorMessageDiv.className = "bot-message";
                 errorMessageDiv.textContent = "Error: Could not connect to backend.";
                 messagesDiv.appendChild(errorMessageDiv);
-
                 scrollToBottom();
             }
         }
 
+        function scrollToBottom() {
+            const messagesDiv = document.getElementById("messages");
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
         function formatMarkdown(text) {
             if (!text || text.trim() === "") return "<p>Error: No response received.</p>";
-
             let parsedText = marked.parse(text);
-
-            // Ensure all links open in a new tab
             parsedText = parsedText.replace(/<a /g, '<a target="_blank" rel="noopener noreferrer" ');
-
             return DOMPurify.sanitize(parsedText);
         }
 
         function toggleDarkMode() {
             document.body.classList.toggle("dark-mode");
             const modeBtn = document.querySelector(".toggle-mode-btn");
-            if (document.body.classList.contains("dark-mode")) {
-                modeBtn.textContent = "☀️";
-            } else {
-                modeBtn.textContent = "🌙";
-            }
+            modeBtn.textContent = document.body.classList.contains("dark-mode") ? "☀️" : "🌙";
         }
     </script>
 </body>
