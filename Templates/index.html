@@ -14,18 +14,34 @@
             <div class="header">
                 <img src="{{ url_for('static', filename='chaticon.png') }}" alt="Chatbot Logo" class="chat-icon">
                 <span class="header-text">Real Estate Chatbot</span>
+
+                <!-- Dark Mode Toggle -->
                 <button class="toggle-mode-btn" onclick="toggleDarkMode()">🌙</button>
+
+                <!-- Compare Button -->
+                <span class="separator">|</span>
+                <button class="compare-btn compare-active" onclick="toggleCompareBox()" id="compareButton">
+                    Compare
+                </button>
             </div>            
 
             <div id="welcome-message" class="welcome-message"></div>
 
             <div id="messages"></div>
 
+            <!-- Chatbot thinking bubble -->
             <div id="chatbot-thinking" class="chatbot-thinking">
                 <img src="{{ url_for('static', filename='chatbot-avatar.png') }}" class="floating-avatar" alt="Chatbot Thinking">
                 <div class="typing-indicator">
                     <span></span><span></span><span></span>
                 </div>
+            </div>
+
+            <!-- Compare Container (Hidden by Default) -->
+            <div id="compare-container" style="display: none;">
+                <input type="text" id="compare-input-1" placeholder="Location 1" />
+                <input type="text" id="compare-input-2" placeholder="Location 2" />
+                <button onclick="sendCompareRequest()">Compare Now</button>
             </div>
 
             <div class="input-area">
@@ -109,6 +125,40 @@
             runWelcomeAnimation();
         };
 
+        // ████████████████████████████████████████████████████████████
+        // ADDED/UPDATED: Dynamically set bubble’s bottom by checking
+        // whichever is higher on the screen: the .input-area or the #compare-container
+        function adjustThinkingPosition() {
+            const chatbotThinking = document.getElementById("chatbot-thinking");
+            const chatbotRect = document.querySelector(".chatbot").getBoundingClientRect();
+
+            // The elements whose top we must consider:
+            const inputArea = document.querySelector(".input-area");
+            const compareContainer = document.getElementById("compare-container");
+
+            // fallback top is the inputArea top
+            let bottomElementRect = inputArea.getBoundingClientRect();
+
+            // if compare container is visible, see which one is higher (i.e. smaller 'top' value)
+            if (compareContainer.style.display !== "none") {
+                const compareRect = compareContainer.getBoundingClientRect();
+                // We want the MIN of these two .top values
+                if (compareRect.top < bottomElementRect.top) {
+                    bottomElementRect = compareRect; 
+                }
+            }
+
+            // distanceFromBottom is how far that top is from the bottom of .chatbot
+            const distanceFromBottom = chatbotRect.bottom - bottomElementRect.top;
+            let newBottom = distanceFromBottom + 15; // extra margin
+            if (newBottom < 65) {
+                newBottom = 65; 
+            }
+
+            chatbotThinking.style.bottom = newBottom + "px";
+        }
+        // ████████████████████████████████████████████████████████████
+
         async function sendMessage() {
             const userInput = document.getElementById("user-input").value.trim();
             if (!userInput) return;
@@ -124,9 +174,13 @@
             messagesDiv.appendChild(userMessageDiv);
 
             scrollToBottom();
-
             document.getElementById("user-input").value = "";
+
+            // ████████████████████████████████████████████████████████████
+            // Adjust bubble position right before showing it:
+            adjustThinkingPosition();
             chatbotThinking.style.display = "flex";
+            // ████████████████████████████████████████████████████████████
 
             try {
                 const response = await fetch("/chat", {
@@ -140,7 +194,6 @@
 
                 chatbotThinking.style.display = "none";
 
-                // Display Processed Query if available
                 if (data.processed_query) {
                     const processedQueryDiv = document.createElement("div");
                     processedQueryDiv.className = "bot-message processed-query";
@@ -148,7 +201,6 @@
                     messagesDiv.appendChild(processedQueryDiv);
                 }
 
-                // Display Main Response
                 if (data.response) {
                     const botMessageDiv = document.createElement("div");
                     botMessageDiv.className = "bot-message markdown-output";
@@ -156,18 +208,16 @@
                     messagesDiv.appendChild(botMessageDiv);
                 }
 
-                // Fix References Formatting
                 if (data.references && data.references.trim() !== "") {
                     let cleanedReferences = data.references
-                        .replace(/\*\*References:\*\*/gi, "<strong>References:</strong>") // Fix "References:**"
-                        .replace(/References:\s*\*\*/gi, "<strong>References:</strong>") // Additional safety check
+                        .replace(/\*\*References:\*\*/gi, "<strong>References:</strong>")
+                        .replace(/References:\s*\*\*/gi, "<strong>References:</strong>")
                         .trim();
 
                     const referencesDiv = document.createElement("div");
                     referencesDiv.className = "bot-message markdown-output";
                     referencesDiv.innerHTML = formatMarkdown(cleanedReferences);
 
-                    // Ensure links open in a new tab
                     const links = referencesDiv.getElementsByTagName("a");
                     for (let link of links) {
                         link.setAttribute("target", "_blank");
@@ -187,6 +237,114 @@
                 messagesDiv.appendChild(errorMessageDiv);
                 scrollToBottom();
             }
+        }
+
+        function toggleCompareBox() {
+            const compareContainer = document.getElementById("compare-container");
+            const compareBtn = document.getElementById("compareButton");
+            
+            if (compareContainer.style.display === "none") {
+                // Show compare container
+                compareContainer.style.display = "flex";
+                compareBtn.classList.remove("compare-active");
+                compareBtn.classList.add("compare-inactive");
+            } else {
+                compareContainer.style.display = "none";
+                compareBtn.classList.remove("compare-inactive");
+                compareBtn.classList.add("compare-active");
+            }
+        }
+
+        async function sendCompareRequest() {
+            const location1 = document.getElementById("compare-input-1").value.trim();
+            const location2 = document.getElementById("compare-input-2").value.trim();
+
+            if (!location1 || !location2) {
+                alert("Please enter two locations to compare!");
+                return;
+            }
+
+            const compareMessage = `Please compare ${location1} with ${location2} in terms of real estate, living conditions, costs, and any key factors.`;
+
+            stopWelcomeAnimation();
+
+            const messagesDiv = document.getElementById("messages");
+            const chatbotThinking = document.getElementById("chatbot-thinking");
+
+            const userMessageDiv = document.createElement("div");
+            userMessageDiv.className = "user-message";
+            userMessageDiv.textContent = compareMessage;
+            messagesDiv.appendChild(userMessageDiv);
+
+            scrollToBottom();
+
+            // ████████████████████████████████████████████████████████████
+            adjustThinkingPosition();
+            chatbotThinking.style.display = "flex";
+            // ████████████████████████████████████████████████████████████
+
+            try {
+                const response = await fetch("/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: compareMessage }),
+                });
+
+                if (!response.ok) throw new Error("Failed to fetch response from the backend.");
+                const data = await response.json();
+
+                chatbotThinking.style.display = "none";
+
+                if (data.processed_query) {
+                    const processedQueryDiv = document.createElement("div");
+                    processedQueryDiv.className = "bot-message processed-query";
+                    processedQueryDiv.innerHTML = `<strong>Processed Query:</strong> ${data.processed_query}`;
+                    messagesDiv.appendChild(processedQueryDiv);
+                }
+
+                if (data.response) {
+                    const botMessageDiv = document.createElement("div");
+                    botMessageDiv.className = "bot-message markdown-output";
+                    botMessageDiv.innerHTML = formatMarkdown(data.response);
+                    messagesDiv.appendChild(botMessageDiv);
+                }
+
+                if (data.references && data.references.trim() !== "") {
+                    let cleanedReferences = data.references
+                        .replace(/\*\*References:\*\*/gi, "<strong>References:</strong>")
+                        .replace(/References:\s*\*\*/gi, "<strong>References:</strong>")
+                        .trim();
+
+                    const referencesDiv = document.createElement("div");
+                    referencesDiv.className = "bot-message markdown-output";
+                    referencesDiv.innerHTML = formatMarkdown(cleanedReferences);
+
+                    const links = referencesDiv.getElementsByTagName("a");
+                    for (let link of links) {
+                        link.setAttribute("target", "_blank");
+                        link.setAttribute("rel", "noopener noreferrer");
+                    }
+
+                    messagesDiv.appendChild(referencesDiv);
+                }
+
+                scrollToBottom();
+            } catch (error) {
+                console.error("Error communicating with backend:", error);
+                chatbotThinking.style.display = "none";
+                const errorMessageDiv = document.createElement("div");
+                errorMessageDiv.className = "bot-message";
+                errorMessageDiv.textContent = "Error: Could not connect to backend.";
+                messagesDiv.appendChild(errorMessageDiv);
+                scrollToBottom();
+            }
+
+            // Clear the compare inputs
+            document.getElementById("compare-input-1").value = "";
+            document.getElementById("compare-input-2").value = "";
+
+            // Optionally hide the compare inputs after
+            toggleCompareBox();
         }
 
         function scrollToBottom() {

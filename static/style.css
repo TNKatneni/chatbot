@@ -12,7 +12,6 @@ body {
     position: relative;
 }
 
-/* Dark Mode Background Overlay */
 body.dark-mode::before {
     content: "";
     position: absolute;
@@ -20,11 +19,10 @@ body.dark-mode::before {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.6); /* Darkens the grass image */
+    background: rgba(0, 0, 0, 0.6);
     z-index: -1;
 }
 
-/* Chatbot Container */
 .container {
     display: flex;
     flex-direction: column;
@@ -47,7 +45,6 @@ body.dark-mode::before {
     transition: background 0.3s ease-in-out, color 0.3s ease-in-out;
 }
 
-/* Welcome Message */
 .welcome-message {
     position: absolute;
     top: 45%;
@@ -55,32 +52,11 @@ body.dark-mode::before {
     transform: translate(-50%, -50%);
     font-size: 18px;
     font-weight: bold;
-    color: rgba(34, 98, 198, 0.7); /* Slightly faded */
+    color: rgba(34, 98, 198, 0.7);
     text-align: center;
     white-space: nowrap;
 }
 
-/* Typing Indicator Bar */
-.typing-indicator-bar {
-    display: inline-block;
-    font-size: 18px;
-    font-weight: bold;
-    animation: blinkCursor 0.8s infinite;
-}
-
-/* Typing Cursor Animation */
-@keyframes blinkCursor {
-    0% { opacity: 1; }
-    50% { opacity: 0; }
-    100% { opacity: 1; }
-}
-
-/* Dark Mode Welcome Message */
-.dark-mode .welcome-message {
-    color: rgba(255, 255, 255, 0.8);
-}
-
-/* Chatbot Header */
 .header {
     display: flex;
     align-items: center;
@@ -95,7 +71,6 @@ body.dark-mode::before {
     transition: background 0.3s ease-in-out;
 }
 
-/* Chatbot Header Icon */
 .chat-icon {
     width: 25px;
     height: 25px;
@@ -103,13 +78,11 @@ body.dark-mode::before {
     margin-right: 13px;
 }
 
-/* Chatbot Title */
 .header-text {
     font-size: 22px;
     font-weight: 600;
 }
 
-/* Dark Mode Toggle Button */
 .toggle-mode-btn {
     background: none;
     border: none;
@@ -120,12 +93,29 @@ body.dark-mode::before {
     padding: 5px;
     transition: color 0.3s ease-in-out;
 }
-
 .toggle-mode-btn:hover {
     opacity: 0.8;
 }
 
-/* Chat Messages */
+.compare-btn {
+    border: none;
+    border-radius: 20px;
+    padding: 4px 10px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-left: 6px;
+    transition: background 0.3s ease-in-out, color 0.3s ease-in-out;
+}
+.compare-active {
+    background: #2262c6; 
+    color: #ffffff;     
+}
+.compare-inactive {
+    background: #ffffff; 
+    color: #2262c6;     
+    border: 1px solid #2262c6;
+}
+
 #messages {
     flex-grow: 1;
     overflow-y: auto;
@@ -135,7 +125,6 @@ body.dark-mode::before {
     scroll-behavior: smooth;
 }
 
-/* User Message */
 .user-message {
     background: #2262c6;
     color: white;
@@ -151,7 +140,6 @@ body.dark-mode::before {
     transition: background 0.3s ease-in-out;
 }
 
-/* Bot Message */
 .bot-message {
     background: #f1f1f1;
     color: black;
@@ -167,7 +155,6 @@ body.dark-mode::before {
     transition: background 0.3s ease-in-out, color 0.3s ease-in-out;
 }
 
-/* Input Area */
 .input-area {
     display: flex;
     align-items: center;
@@ -176,7 +163,6 @@ body.dark-mode::before {
     background: white;
     transition: background 0.3s ease-in-out, border-color 0.3s ease-in-out;
 }
-
 .input-area input {
     flex: 1;
     padding: 10px;
@@ -186,11 +172,9 @@ body.dark-mode::before {
     outline: none;
     transition: border-color 0.2s ease-in-out;
 }
-
 .input-area input:focus {
     border-color: #2262c6;
 }
-
 .input-area button {
     padding: 10px 16px;
     margin-left: 8px;
@@ -202,29 +186,25 @@ body.dark-mode::before {
     font-size: 16px;
     transition: background 0.2s ease-in-out;
 }
-
 .input-area button:hover {
     background: #1b4fa3;
 }
 
-/* Footer */
 footer {
     text-align: center;
     padding: 10px;
     font-size: 14px;
-    color: white; /* Always white in both modes */
+    color: white;
 }
 
 footer a {
     color: #2262c6;
     text-decoration: none;
 }
-
 footer a:hover {
     text-decoration: underline;
 }
 
-/* Dark Mode */
 body.dark-mode {
     background: url("../static/grass.png") no-repeat center center fixed;
     background-size: cover;
@@ -257,17 +237,14 @@ body.dark-mode {
     background: #222;
     border-top: 1px solid #444;
 }
-
 .dark-mode .input-area input {
     background: #333;
     color: white;
     border: 1px solid #444;
 }
-
 .dark-mode .input-area button {
     background: #3a75c4;
 }
-
 .dark-mode .input-area button:hover {
     background: #2e5aa5;
 }
@@ -279,8 +256,12 @@ body.dark-mode {
 .dark-mode footer a {
     color: #3a75c4;
 }
+.dark-mode footer a:hover {
+    color: #66c2ff;
+    text-decoration: underline;
+}
 
-/* Chatbot Thinking Animation */
+/* Chatbot Thinking Bubble (bottom=65px fallback) */
 .chatbot-thinking {
     display: none;
     align-items: center;
@@ -289,14 +270,12 @@ body.dark-mode {
     right: 20px;
 }
 
-/* Floating Chatbot Avatar */
 .floating-avatar {
     width: 32px;
     height: 40px;
     animation: floatUpDown 3s infinite ease-in-out;
 }
 
-/* Typing Indicator */
 .typing-indicator {
     display: flex;
     justify-content: center;
@@ -313,21 +292,17 @@ body.dark-mode {
     display: inline-block;
     animation: typingBlink 1.5s infinite;
 }
-
 .typing-indicator span:nth-child(2) {
     animation-delay: 0.2s;
 }
-
 .typing-indicator span:nth-child(3) {
     animation-delay: 0.4s;
 }
 
-/* Auto-scroll to bottom */
 #messages {
     scroll-behavior: smooth;
 }
 
-/* Animations */
 @keyframes typingBlink {
     0% { opacity: 0.3; }
     50% { opacity: 1; }
@@ -340,42 +315,84 @@ body.dark-mode {
     100% { transform: translateY(0px); }
 }
 
-/* Blinking Cursor */
 .blinking-cursor {
     display: inline-block;
     font-weight: bold;
     font-size: 18px;
     animation: blinkCursor 1s infinite;
 }
-
 @keyframes blinkCursor {
     0% { opacity: 1; }
     50% { opacity: 0; }
     100% { opacity: 1; }
 }
 
-/* Fix for Dark Mode Toggle Button */
-.toggle-mode-btn {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 18px;
-    cursor: pointer;
-    margin-left: auto;
-    padding: 5px;
-    transition: color 0.3s ease-in-out;
-}
-
-.toggle-mode-btn:hover {
-    opacity: 0.8;
-    background: none; /* Removes unwanted box */
-}
-/* Make links readable in dark mode */
 .dark-mode a {
-    color: #4fa3ff; /* Light blue for contrast */
+    color: #4fa3ff;
+}
+.dark-mode a:hover {
+    color: #66c2ff;
+    text-decoration: underline;
 }
 
-.dark-mode a:hover {
-    color: #66c2ff; /* Lighter blue when hovered */
-    text-decoration: underline;
+.separator {
+    margin: 0 8px;
+    color: white;
+    font-weight: bold;
+}
+
+#compare-container {
+    display: none;
+    padding: 10px 12px;
+    border-top: 1px solid #ddd;
+    background: #f9f9f9;
+    justify-content: space-between;
+    align-items: center;
+}
+#compare-container input {
+    width: 35%;
+    padding: 6px;
+    border: 1px solid #ddd;
+    border-radius: 15px;
+    font-size: 14px;
+}
+#compare-container button {
+    padding: 6px 14px;
+    background: #2262c6;
+    color: white;
+    border: none;
+    border-radius: 15px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s ease-in-out;
+}
+#compare-container button:hover {
+    background: #1b4fa3;
+}
+
+/* Dark Mode Compare Container Fix */
+.dark-mode #compare-container {
+    background: #222;
+    border-top: 1px solid #444;
+}
+.dark-mode #compare-container input {
+    background: #333;
+    color: #fff;
+    border: 1px solid #444;
+}
+.dark-mode #compare-container button {
+    background: #3a75c4;
+}
+.dark-mode #compare-container button:hover {
+    background: #2e5aa5;
+}
+
+/* █████ ADDED for White Welcome Message in Dark Mode █████ */
+.dark-mode .welcome-message {
+    color: #fff; /* White text in dark mode */
+}
+
+/* █████ ADDED for White Placeholder Text █████ */
+.dark-mode input::placeholder {
+    color: #ccc; /* or #fff if you prefer brighter text */
 }

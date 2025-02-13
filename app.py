@@ -76,7 +76,9 @@ def preprocess_query(user_message):
     named_entities = {ent.text for ent in doc.ents}
 
     # 3️⃣ Extract meaningful keywords using KeyBERT
-    keybert_keywords = kw_model.extract_keywords(user_message, keyphrase_ngram_range=(1, 2), stop_words="english", top_n=8)
+    keybert_keywords = kw_model.extract_keywords(
+        user_message, keyphrase_ngram_range=(1, 2), stop_words="english", top_n=8
+    )
     extracted_phrases = [keyword[0] for keyword in keybert_keywords]
 
     # 4️⃣ Define categories for structured extraction
@@ -101,20 +103,36 @@ def preprocess_query(user_message):
             extracted_info["priorities"].append(token.text)
         elif word in lifestyle_terms:
             extracted_info["lifestyle"].append(token.text)
-        elif token.text in named_entities:  # Keep cities, numbers, locations
+        elif token.text in named_entities:  # Keep recognized place names, numbers, etc.
             extracted_info["location"].append(token.text)
 
     # Add extracted phrases from KeyBERT
     extracted_info["priorities"].extend(extracted_phrases)
 
-    # 7️⃣ Construct final processed query
-    structured_query = f"Looking for properties in {', '.join(extracted_info['location']) if extracted_info['location'] else 'Illinois'}"
+    # 7️⃣ Remove duplicates while preserving order
+    def remove_duplicates_preserve_order(seq):
+        seen = set()
+        new_list = []
+        for x in seq:
+            if x not in seen:
+                seen.add(x)
+                new_list.append(x)
+        return new_list
+
+    extracted_info["location"] = remove_duplicates_preserve_order(extracted_info["location"])
+    extracted_info["priorities"] = remove_duplicates_preserve_order(extracted_info["priorities"])
+    extracted_info["lifestyle"] = remove_duplicates_preserve_order(extracted_info["lifestyle"])
+
+    # 8️⃣ Construct final processed query
+    structured_query = "Looking for properties"
+    if extracted_info["location"]:
+        structured_query += f" in {', '.join(extracted_info['location'])}"
     if extracted_info["budget"]:
         structured_query += f" within a {extracted_info['budget']} budget"
     if extracted_info["priorities"]:
-        structured_query += f" with priorities in {', '.join(set(extracted_info['priorities']))}"
+        structured_query += f" with priorities in {', '.join(extracted_info['priorities'])}"
     if extracted_info["lifestyle"]:
-        structured_query += f", considering lifestyle factors like {', '.join(set(extracted_info['lifestyle']))}"
+        structured_query += f", considering lifestyle factors like {', '.join(extracted_info['lifestyle'])}"
 
     return structured_query.strip()
 
