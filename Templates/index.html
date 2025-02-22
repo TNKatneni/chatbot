@@ -1,369 +1,371 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real Estate Chatbot</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Real Estate Chatbot</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
 </head>
 <body>
-    <div class="container">
-        <div class="chatbot">
-            <div class="header">
-                <img src="{{ url_for('static', filename='chaticon.png') }}" alt="Chatbot Logo" class="chat-icon">
-                <span class="header-text">Real Estate Chatbot</span>
+  <div class="container">
+    <div class="chatbot">
+      <div class="header">
+        <img src="{{ url_for('static', filename='chaticon.png') }}" alt="Chatbot Logo" class="chat-icon">
+        <span class="header-text">Real Estate Chatbot</span>
 
-                <!-- Dark Mode Toggle -->
-                <button class="toggle-mode-btn" onclick="toggleDarkMode()">🌙</button>
+        <!-- Dark Mode Toggle -->
+        <button class="toggle-mode-btn" onclick="toggleDarkMode()">🌙</button>
 
-                <!-- Compare Button -->
-                <span class="separator">|</span>
-                <button class="compare-btn compare-active" onclick="toggleCompareBox()" id="compareButton">
-                    Compare
-                </button>
-            </div>            
+        <!-- Compare Button -->
+        <span class="separator">|</span>
+        <button class="compare-btn compare-active" onclick="toggleCompareBox()" id="compareButton">
+          Compare
+        </button>
+      </div>
 
-            <div id="welcome-message" class="welcome-message"></div>
+      <div id="welcome-message" class="welcome-message"></div>
+      <div id="messages"></div>
 
-            <div id="messages"></div>
-
-            <!-- Chatbot thinking bubble -->
-            <div id="chatbot-thinking" class="chatbot-thinking">
-                <img src="{{ url_for('static', filename='chatbot-avatar.png') }}" class="floating-avatar" alt="Chatbot Thinking">
-                <div class="typing-indicator">
-                    <span></span><span></span><span></span>
-                </div>
-            </div>
-
-            <!-- Compare Container (Hidden by Default) -->
-            <div id="compare-container" style="display: none;">
-                <input type="text" id="compare-input-1" placeholder="Location 1" />
-                <input type="text" id="compare-input-2" placeholder="Location 2" />
-                <button onclick="sendCompareRequest()">Compare Now</button>
-            </div>
-
-            <div class="input-area">
-                <input type="text" id="user-input" placeholder="Type a message..." onkeypress="handleKeyPress(event)" />
-                <button onclick="sendMessage()">Send</button>
-            </div>
+      <!-- Chatbot thinking bubble -->
+      <div id="chatbot-thinking" class="chatbot-thinking">
+        <img src="{{ url_for('static', filename='chatbot-avatar.png') }}" class="floating-avatar" alt="Chatbot Thinking">
+        <div class="typing-indicator">
+          <span></span><span></span><span></span>
         </div>
-        
-        <footer>
-            <p>© 2025 Real Estate Chatbot. All rights reserved.</p>
-            <p><a href="#">Privacy Policy</a> | <a href="#">Terms of Service</a></p>
-        </footer>
+      </div>
+
+      <!-- Compare Container (Hidden by Default) -->
+      <div id="compare-container" style="display: none;">
+        <input type="text" id="compare-input-1" placeholder="Location 1" />
+        <input type="text" id="compare-input-2" placeholder="Location 2" />
+        <button onclick="sendCompareRequest()">Compare Now</button>
+      </div>
+
+      <div class="input-area">
+        <input type="text" id="user-input" placeholder="Type a message..." onkeypress="handleKeyPress(event)" />
+        <button onclick="sendMessage()">Send</button>
+      </div>
     </div>
 
-    <script>
-        let welcomeAnimationActive = true;
-        let typingTimeouts = [];
+    <footer>
+      <p>© 2025 Real Estate Chatbot. All rights reserved.</p>
+      <p><a href="#">Privacy Policy</a> | <a href="#">Terms of Service</a></p>
+    </footer>
+  </div>
 
-        const welcomeMessages = [
-            "Initializing...",
-            "Setting up real estate insights...",
-            "Welcome! I'm Homi, your AI real estate expert!"
-        ];
+  <script>
+    DOMPurify.setConfig({
+      ALLOWED_ATTR: ['href', 'target', 'rel', 'onclick', 'class', 'id', 'style']
+    });
 
-        function typeEffect(element, text, index = 0, callback) {
-            if (!welcomeAnimationActive) return;
+    let welcomeAnimationActive = true;
+    let typingTimeouts = [];
 
-            if (index < text.length) {
-                element.innerHTML = text.substring(0, index + 1) + '<span class="blinking-cursor">|</span>';
-                typingTimeouts.push(setTimeout(() => typeEffect(element, text, index + 1, callback), 70));
+    const welcomeMessages = [
+      "Initializing...",
+      "Setting up real estate insights...",
+      "Welcome! I'm Homi, your AI real estate expert!"
+    ];
+
+    function typeEffect(element, text, index = 0, callback) {
+      if (!welcomeAnimationActive) return;
+      if (index < text.length) {
+        element.innerHTML = text.substring(0, index + 1) + '<span class="blinking-cursor">|</span>';
+        typingTimeouts.push(setTimeout(() => typeEffect(element, text, index + 1, callback), 70));
+      } else {
+        if (callback) typingTimeouts.push(setTimeout(callback, 1000));
+      }
+    }
+
+    function clearTextEffect(element, callback) {
+      const text = element.innerText.replace("|", "");
+      if (text.length > 0) {
+        element.innerHTML = text.substring(0, text.length - 1) + '<span class="blinking-cursor">|</span>';
+        typingTimeouts.push(setTimeout(() => clearTextEffect(element, callback), 40));
+      } else {
+        if (callback) callback();
+      }
+    }
+
+    function runWelcomeAnimation() {
+      const welcomeElement = document.getElementById("welcome-message");
+      let step = 0;
+      function nextStep() {
+        if (step < welcomeMessages.length && welcomeAnimationActive) {
+          typeEffect(welcomeElement, welcomeMessages[step], 0, () => {
+            if (step === welcomeMessages.length - 1) {
+              welcomeElement.innerHTML = welcomeMessages[step] + '<span class="blinking-cursor">|</span>';
             } else {
-                if (callback) typingTimeouts.push(setTimeout(callback, 1000));
+              setTimeout(() => clearTextEffect(welcomeElement, () => {
+                step++;
+                nextStep();
+              }), 1000);
             }
+          });
         }
+      }
+      nextStep();
+    }
 
-        function clearTextEffect(element, callback) {
-            const text = element.innerText.replace("|", "");
-            if (text.length > 0) {
-                element.innerHTML = text.substring(0, text.length - 1) + '<span class="blinking-cursor">|</span>';
-                typingTimeouts.push(setTimeout(() => clearTextEffect(element, callback), 40));
-            } else {
-                if (callback) callback();
-            }
-        }
+    function stopWelcomeAnimation() {
+      welcomeAnimationActive = false;
+      typingTimeouts.forEach(timeout => clearTimeout(timeout));
+      document.getElementById("welcome-message").innerHTML = "";
+    }
 
-        function runWelcomeAnimation() {
-            const welcomeElement = document.getElementById("welcome-message");
-            let step = 0;
+    function handleKeyPress(event) {
+      if (event.key === "Enter") {
+        stopWelcomeAnimation();
+        sendMessage();
+      }
+    }
 
-            function nextStep() {
-                if (step < welcomeMessages.length && welcomeAnimationActive) {
-                    typeEffect(welcomeElement, welcomeMessages[step], 0, () => {
-                        if (step === welcomeMessages.length - 1) {
-                            welcomeElement.innerHTML = welcomeMessages[step] + '<span class="blinking-cursor">|</span>';
-                        } else {
-                            setTimeout(() => clearTextEffect(welcomeElement, () => {
-                                step++;
-                                nextStep();
-                            }), 1000);
-                        }
-                    });
-                }
-            }
-            nextStep();
-        }
+    window.onload = function () {
+      runWelcomeAnimation();
+    };
 
-        function stopWelcomeAnimation() {
-            welcomeAnimationActive = false;
-            typingTimeouts.forEach(timeout => clearTimeout(timeout));
-            document.getElementById("welcome-message").innerHTML = "";
-        }
+    // Helper: parse lines - to extract the site name and the actual link
+    function parseReferenceLine(line) {
+      line = line.replace(/^[0-9.\-•]+\s*/, "");
 
-        function handleKeyPress(event) {
-            if (event.key === "Enter") {
-                stopWelcomeAnimation();
-                sendMessage();
-            }
-        }
-
-        window.onload = function () {
-            runWelcomeAnimation();
+      // Check for Markdown link syntax [text](url)
+      const mdMatch = line.match(/\[(.*?)\]\((.*?)\)/);
+      if (mdMatch) {
+        return {
+          text: mdMatch[1].trim(),
+          url: mdMatch[2].trim()
         };
+      }
 
-        // ████████████████████████████████████████████████████████████
-        // ADDED/UPDATED: Dynamically set bubble’s bottom by checking
-        // whichever is higher on the screen: the .input-area or the #compare-container
-        function adjustThinkingPosition() {
-            const chatbotThinking = document.getElementById("chatbot-thinking");
-            const chatbotRect = document.querySelector(".chatbot").getBoundingClientRect();
+      // If there's no Markdown link, we might see "naperville203.org (https://www.naperville203.org)"
+      const bracketMatch = line.match(/^(.*?)\((https?:\/\/.*?)\)$/);
+      if (bracketMatch) {
+        return {
+          text: bracketMatch[1].trim(),
+          url: bracketMatch[2].trim()
+        };
+      }
 
-            // The elements whose top we must consider:
-            const inputArea = document.querySelector(".input-area");
-            const compareContainer = document.getElementById("compare-container");
+      // If there's a direct URL with no text, fallback
+      const directUrl = line.match(/(https?:\/\/\S+)/);
+      if (directUrl) {
+        return {
+          text: directUrl[1],
+          url: directUrl[1]
+        };
+      }
 
-            // fallback top is the inputArea top
-            let bottomElementRect = inputArea.getBoundingClientRect();
+      // If none matched, fallback to the raw line as text + url
+      return {
+        text: line,
+        url: line
+      };
+    }
 
-            // if compare container is visible, see which one is higher (i.e. smaller 'top' value)
-            if (compareContainer.style.display !== "none") {
-                const compareRect = compareContainer.getBoundingClientRect();
-                // We want the MIN of these two .top values
-                if (compareRect.top < bottomElementRect.top) {
-                    bottomElementRect = compareRect; 
-                }
-            }
+    // Helper: build a references bubble with horizontally styled links, no heading
+    function createReferenceLinks(refText) {
+        const referencesBox = document.createElement("div");
+        referencesBox.className = "bot-message references-box"; // A bubble-like container
 
-            // distanceFromBottom is how far that top is from the bottom of .chatbot
-            const distanceFromBottom = chatbotRect.bottom - bottomElementRect.top;
-            let newBottom = distanceFromBottom + 15; // extra margin
-            if (newBottom < 65) {
-                newBottom = 65; 
-            }
+        referencesBox.innerHTML = refText;
 
-            chatbotThinking.style.bottom = newBottom + "px";
+        return referencesBox;
+}
+
+
+    function adjustThinkingPosition() {
+      const chatbotThinking = document.getElementById("chatbot-thinking");
+      const chatbotRect = document.querySelector(".chatbot").getBoundingClientRect();
+      const inputArea = document.querySelector(".input-area");
+      const compareContainer = document.getElementById("compare-container");
+      let bottomElementRect = inputArea.getBoundingClientRect();
+
+      if (compareContainer.style.display !== "none") {
+        const compareRect = compareContainer.getBoundingClientRect();
+        if (compareRect.top < bottomElementRect.top) {
+          bottomElementRect = compareRect;
         }
-        // ████████████████████████████████████████████████████████████
+      }
+      const distanceFromBottom = chatbotRect.bottom - bottomElementRect.top;
+      let newBottom = distanceFromBottom + 15;
+      if (newBottom < 65) {
+        newBottom = 65;
+      }
+      chatbotThinking.style.bottom = newBottom + "px";
+    }
 
-        async function sendMessage() {
-            const userInput = document.getElementById("user-input").value.trim();
-            if (!userInput) return;
+    async function sendMessage() {
+      const userInput = document.getElementById("user-input").value.trim();
+      if (!userInput) return;
+      stopWelcomeAnimation();
 
-            stopWelcomeAnimation();
+      const messagesDiv = document.getElementById("messages");
+      const chatbotThinking = document.getElementById("chatbot-thinking");
 
-            const messagesDiv = document.getElementById("messages");
-            const chatbotThinking = document.getElementById("chatbot-thinking");
+      // User's message bubble
+      const userMessageDiv = document.createElement("div");
+      userMessageDiv.className = "user-message";
+      userMessageDiv.textContent = userInput;
+      messagesDiv.appendChild(userMessageDiv);
+      scrollToBottom();
 
-            const userMessageDiv = document.createElement("div");
-            userMessageDiv.className = "user-message";
-            userMessageDiv.textContent = userInput;
-            messagesDiv.appendChild(userMessageDiv);
+      document.getElementById("user-input").value = "";
+      adjustThinkingPosition();
+      chatbotThinking.style.display = "flex";
 
-            scrollToBottom();
-            document.getElementById("user-input").value = "";
+      try {
+        const response = await fetch("/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: userInput }),
+        });
+        if (!response.ok) throw new Error("Failed to fetch response from the backend.");
 
-            // ████████████████████████████████████████████████████████████
-            // Adjust bubble position right before showing it:
-            adjustThinkingPosition();
-            chatbotThinking.style.display = "flex";
-            // ████████████████████████████████████████████████████████████
+        const data = await response.json();
+        chatbotThinking.style.display = "none";
 
-            try {
-                const response = await fetch("/chat", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ message: userInput }),
-                });
-
-                if (!response.ok) throw new Error("Failed to fetch response from the backend.");
-                const data = await response.json();
-
-                chatbotThinking.style.display = "none";
-
-                if (data.processed_query) {
-                    const processedQueryDiv = document.createElement("div");
-                    processedQueryDiv.className = "bot-message processed-query";
-                    processedQueryDiv.innerHTML = `<strong>Processed Query:</strong> ${data.processed_query}`;
-                    messagesDiv.appendChild(processedQueryDiv);
-                }
-
-                if (data.response) {
-                    const botMessageDiv = document.createElement("div");
-                    botMessageDiv.className = "bot-message markdown-output";
-                    botMessageDiv.innerHTML = formatMarkdown(data.response);
-                    messagesDiv.appendChild(botMessageDiv);
-                }
-
-                if (data.references && data.references.trim() !== "") {
-                    let cleanedReferences = data.references
-                        .replace(/\*\*References:\*\*/gi, "<strong>References:</strong>")
-                        .replace(/References:\s*\*\*/gi, "<strong>References:</strong>")
-                        .trim();
-
-                    const referencesDiv = document.createElement("div");
-                    referencesDiv.className = "bot-message markdown-output";
-                    referencesDiv.innerHTML = formatMarkdown(cleanedReferences);
-
-                    const links = referencesDiv.getElementsByTagName("a");
-                    for (let link of links) {
-                        link.setAttribute("target", "_blank");
-                        link.setAttribute("rel", "noopener noreferrer");
-                    }
-
-                    messagesDiv.appendChild(referencesDiv);
-                }
-
-                scrollToBottom();
-            } catch (error) {
-                console.error("Error communicating with backend:", error);
-                chatbotThinking.style.display = "none";
-                const errorMessageDiv = document.createElement("div");
-                errorMessageDiv.className = "bot-message";
-                errorMessageDiv.textContent = "Error: Could not connect to backend.";
-                messagesDiv.appendChild(errorMessageDiv);
-                scrollToBottom();
-            }
+        // Show processed query if available
+        if (data.processed_query) {
+          const processedQueryDiv = document.createElement("div");
+          processedQueryDiv.className = "bot-message processed-query";
+          processedQueryDiv.innerHTML = `<strong>Processed Query:</strong> ${data.processed_query}`;
+          messagesDiv.appendChild(processedQueryDiv);
         }
 
-        function toggleCompareBox() {
-            const compareContainer = document.getElementById("compare-container");
-            const compareBtn = document.getElementById("compareButton");
-            
-            if (compareContainer.style.display === "none") {
-                // Show compare container
-                compareContainer.style.display = "flex";
-                compareBtn.classList.remove("compare-active");
-                compareBtn.classList.add("compare-inactive");
-            } else {
-                compareContainer.style.display = "none";
-                compareBtn.classList.remove("compare-inactive");
-                compareBtn.classList.add("compare-active");
-            }
+        // Show main response
+        if (data.response) {
+          const botMessageDiv = document.createElement("div");
+          botMessageDiv.className = "bot-message markdown-output";
+          botMessageDiv.innerHTML = formatMarkdown(data.response);
+          messagesDiv.appendChild(botMessageDiv);
         }
 
-        async function sendCompareRequest() {
-            const location1 = document.getElementById("compare-input-1").value.trim();
-            const location2 = document.getElementById("compare-input-2").value.trim();
-
-            if (!location1 || !location2) {
-                alert("Please enter two locations to compare!");
-                return;
-            }
-
-            const compareMessage = `Please compare ${location1} with ${location2} in terms of real estate, living conditions, costs, and any key factors.`;
-
-            stopWelcomeAnimation();
-
-            const messagesDiv = document.getElementById("messages");
-            const chatbotThinking = document.getElementById("chatbot-thinking");
-
-            const userMessageDiv = document.createElement("div");
-            userMessageDiv.className = "user-message";
-            userMessageDiv.textContent = compareMessage;
-            messagesDiv.appendChild(userMessageDiv);
-
-            scrollToBottom();
-
-            // ████████████████████████████████████████████████████████████
-            adjustThinkingPosition();
-            chatbotThinking.style.display = "flex";
-            // ████████████████████████████████████████████████████████████
-
-            try {
-                const response = await fetch("/chat", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ message: compareMessage }),
-                });
-
-                if (!response.ok) throw new Error("Failed to fetch response from the backend.");
-                const data = await response.json();
-
-                chatbotThinking.style.display = "none";
-
-                if (data.processed_query) {
-                    const processedQueryDiv = document.createElement("div");
-                    processedQueryDiv.className = "bot-message processed-query";
-                    processedQueryDiv.innerHTML = `<strong>Processed Query:</strong> ${data.processed_query}`;
-                    messagesDiv.appendChild(processedQueryDiv);
-                }
-
-                if (data.response) {
-                    const botMessageDiv = document.createElement("div");
-                    botMessageDiv.className = "bot-message markdown-output";
-                    botMessageDiv.innerHTML = formatMarkdown(data.response);
-                    messagesDiv.appendChild(botMessageDiv);
-                }
-
-                if (data.references && data.references.trim() !== "") {
-                    let cleanedReferences = data.references
-                        .replace(/\*\*References:\*\*/gi, "<strong>References:</strong>")
-                        .replace(/References:\s*\*\*/gi, "<strong>References:</strong>")
-                        .trim();
-
-                    const referencesDiv = document.createElement("div");
-                    referencesDiv.className = "bot-message markdown-output";
-                    referencesDiv.innerHTML = formatMarkdown(cleanedReferences);
-
-                    const links = referencesDiv.getElementsByTagName("a");
-                    for (let link of links) {
-                        link.setAttribute("target", "_blank");
-                        link.setAttribute("rel", "noopener noreferrer");
-                    }
-
-                    messagesDiv.appendChild(referencesDiv);
-                }
-
-                scrollToBottom();
-            } catch (error) {
-                console.error("Error communicating with backend:", error);
-                chatbotThinking.style.display = "none";
-                const errorMessageDiv = document.createElement("div");
-                errorMessageDiv.className = "bot-message";
-                errorMessageDiv.textContent = "Error: Could not connect to backend.";
-                messagesDiv.appendChild(errorMessageDiv);
-                scrollToBottom();
-            }
-
-            // Clear the compare inputs
-            document.getElementById("compare-input-1").value = "";
-            document.getElementById("compare-input-2").value = "";
-
-            // Optionally hide the compare inputs after
-            toggleCompareBox();
+        // Show references in a separate bubble, no heading
+        if (data.references && data.references.trim() !== "") {
+          const referencesDiv = createReferenceLinks(data.references.trim());
+          messagesDiv.appendChild(referencesDiv);
         }
 
-        function scrollToBottom() {
-            const messagesDiv = document.getElementById("messages");
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        scrollToBottom();
+      } catch (error) {
+        console.error("Error communicating with backend:", error);
+        chatbotThinking.style.display = "none";
+        const errorMessageDiv = document.createElement("div");
+        errorMessageDiv.className = "bot-message";
+        errorMessageDiv.textContent = "Error: Could not connect to backend.";
+        messagesDiv.appendChild(errorMessageDiv);
+        scrollToBottom();
+      }
+    }
+
+    function toggleCompareBox() {
+      const compareContainer = document.getElementById("compare-container");
+      const compareBtn = document.getElementById("compareButton");
+      if (compareContainer.style.display === "none") {
+        compareContainer.style.display = "flex";
+        compareBtn.classList.remove("compare-active");
+        compareBtn.classList.add("compare-inactive");
+      } else {
+        compareContainer.style.display = "none";
+        compareBtn.classList.remove("compare-inactive");
+        compareBtn.classList.add("compare-active");
+      }
+    }
+
+    async function sendCompareRequest() {
+      const location1 = document.getElementById("compare-input-1").value.trim();
+      const location2 = document.getElementById("compare-input-2").value.trim();
+      if (!location1 || !location2) {
+        alert("Please enter two locations to compare!");
+        return;
+      }
+
+      const compareMessage = `Please compare ${location1} with ${location2} in terms of real estate, living conditions, costs, and any key factors.`;
+      stopWelcomeAnimation();
+
+      const messagesDiv = document.getElementById("messages");
+      const chatbotThinking = document.getElementById("chatbot-thinking");
+
+      // User's compare request
+      const userMessageDiv = document.createElement("div");
+      userMessageDiv.className = "user-message";
+      userMessageDiv.textContent = compareMessage;
+      messagesDiv.appendChild(userMessageDiv);
+      scrollToBottom();
+
+      adjustThinkingPosition();
+      chatbotThinking.style.display = "flex";
+
+      try {
+        const response = await fetch("/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: compareMessage }),
+        });
+        if (!response.ok) throw new Error("Failed to fetch response from the backend.");
+
+        const data = await response.json();
+        chatbotThinking.style.display = "none";
+
+        // Show processed query if available
+        if (data.processed_query) {
+          const processedQueryDiv = document.createElement("div");
+          processedQueryDiv.className = "bot-message processed-query";
+          processedQueryDiv.innerHTML = `<strong>Processed Query:</strong> ${data.processed_query}`;
+          messagesDiv.appendChild(processedQueryDiv);
         }
 
-        function formatMarkdown(text) {
-            if (!text || text.trim() === "") return "<p>Error: No response received.</p>";
-            let parsedText = marked.parse(text);
-            parsedText = parsedText.replace(/<a /g, '<a target="_blank" rel="noopener noreferrer" ');
-            return DOMPurify.sanitize(parsedText);
+        // Show main response
+        if (data.response) {
+          const botMessageDiv = document.createElement("div");
+          botMessageDiv.className = "bot-message markdown-output";
+          botMessageDiv.innerHTML = formatMarkdown(data.response);
+          messagesDiv.appendChild(botMessageDiv);
         }
 
-        function toggleDarkMode() {
-            document.body.classList.toggle("dark-mode");
-            const modeBtn = document.querySelector(".toggle-mode-btn");
-            modeBtn.textContent = document.body.classList.contains("dark-mode") ? "☀️" : "🌙";
+        // Show references in a separate bubble, no heading
+        if (data.references && data.references.trim() !== "") {
+          const referencesDiv = createReferenceLinks(data.references.trim());
+          messagesDiv.appendChild(referencesDiv);
         }
-    </script>
+
+        scrollToBottom();
+      } catch (error) {
+        console.error("Error communicating with backend:", error);
+        chatbotThinking.style.display = "none";
+        const errorMessageDiv = document.createElement("div");
+        errorMessageDiv.className = "bot-message";
+        errorMessageDiv.textContent = "Error: Could not connect to backend.";
+        messagesDiv.appendChild(errorMessageDiv);
+        scrollToBottom();
+      }
+
+      // Clear fields and hide compare box
+      document.getElementById("compare-input-1").value = "";
+      document.getElementById("compare-input-2").value = "";
+      toggleCompareBox();
+    }
+
+    function scrollToBottom() {
+      const messagesDiv = document.getElementById("messages");
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function formatMarkdown(text) {
+      if (!text || text.trim() === "") return "<p>Error: No response received.</p>";
+      let parsedText = marked.parse(text);
+      // Force all <a> to open in new tab
+      parsedText = parsedText.replace(/<a /g, '<a target="_blank" rel="noopener noreferrer" ');
+      return DOMPurify.sanitize(parsedText);
+    }
+
+    function toggleDarkMode() {
+      document.body.classList.toggle("dark-mode");
+      const modeBtn = document.querySelector(".toggle-mode-btn");
+      modeBtn.textContent = document.body.classList.contains("dark-mode") ? "☀️" : "🌙";
+    }
+  </script>
 </body>
 </html>
