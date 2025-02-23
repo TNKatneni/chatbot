@@ -16,30 +16,30 @@ from urllib.parse import urlparse
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-# NLP Models
+# Load NLP models
 nlp = spacy.load("en_core_web_sm")
 nltk.download("stopwords")
 nltk.download("punkt")
 from nltk.corpus import stopwords
 
-# KeyBERT
+# Initialize KeyBERT
 kw_model = KeyBERT()
 
-# Extractive Summarizer
+# Initialize Summarizer
 extractive_summarizer = Summarizer()
 
-# Flask app
+# Initialize Flask app
 app = Flask(__name__, static_folder="static", template_folder="templates")
 CORS(app)
 
-# API Rate Limiting
+# Configure API Rate Limiting
 limiter = Limiter(
     get_remote_address,
     app=app,
     default_limits=["5 per minute"],
 )
 
-# OpenAI API Key
+# Load OpenAI API Key
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 def clean_url(url):
@@ -138,12 +138,21 @@ def preprocess_query(user_message):
     """
     Uses spaCy and KeyBERT to extract key info from the user's query.
     Builds a structured query for real estate or location-based questions.
+    Also detects if it's a comparison.
     """
     lower_query = user_message.lower()
-    comparison_phrases = ["better to live", "compare", "vs", "versus", "difference between", "differences", "pros and cons"]
+    comparison_phrases = [
+        "better to live",
+        "compare",
+        "vs",
+        "versus",
+        "difference between",
+        "differences",
+        "pros and cons"
+    ]
     is_comparison = any(phrase in lower_query for phrase in comparison_phrases)
 
-    # Contractions.
+    # Expand contractions
     contractions = {"I'm": "I am", "don't": "do not", "isn't": "is not", "can't": "cannot"}
     for contraction, expanded in contractions.items():
         user_message = user_message.replace(contraction, expanded)
@@ -166,6 +175,7 @@ def preprocess_query(user_message):
     priority_terms = {"safety", "crime", "schools", "education", "job market", "employment", "property taxes"}
     lifestyle_terms = {"parks", "shopping", "hospitals", "transportation", "public transit", "community"}
 
+    # Identify budget, location, priorities, lifestyle
     for ent in doc.ents:
         if ent.label_ == "MONEY":
             extracted_info["budget"] = ent.text
@@ -181,7 +191,7 @@ def preprocess_query(user_message):
         elif token.text in named_entities:
             extracted_info["location"].append(token.text)
 
-    # Merge city + State if needed
+    # Merge city + state if needed
     merged_locations = []
     skip_next = False
     for i, loc in enumerate(extracted_info["location"]):
@@ -208,6 +218,7 @@ def preprocess_query(user_message):
     final_phrases = [phrase for phrase in extracted_phrases if phrase.lower() not in location_lower]
     extracted_info["priorities"].extend(final_phrases)
 
+    # Remove duplicates while preserving order
     def remove_duplicates_preserve_order(seq):
         seen = set()
         new_list = []
@@ -220,7 +231,7 @@ def preprocess_query(user_message):
     for k in ["location", "priorities", "lifestyle"]:
         extracted_info[k] = remove_duplicates_preserve_order(extracted_info[k])
 
-    # Build Structured Query
+    # Build structured query
     if is_comparison and len(extracted_info["location"]) >= 2:
         if "cost" in lower_query or "living" in lower_query:
             structured_query = f"Compare cost of living between {extracted_info['location'][0]} and {extracted_info['location'][1]}."
@@ -254,7 +265,7 @@ def preprocess_query(user_message):
         else:
             structured_query = user_message
 
-    return structured_query.strip()
+    return structured_query.strip(), is_comparison
 
 @app.route("/")
 def home():
@@ -265,16 +276,41 @@ def home():
 def chat():
     try:
         user_message = request.json.get("message", "").strip()
+        compare_input_1 = request.json.get("compare_input_1", "").strip()
+        compare_input_2 = request.json.get("compare_input_2", "").strip()
         print(f"User Input: {user_message}")
 
-        if not user_message:
+        # Detect "Compare Now" usage: if both compare_input_1 and compare_input_2 are set
+        is_compare_flow = bool(compare_input_1 and compare_input_2)
+
+        if not user_message and not is_compare_flow:
             return jsonify({"response": "Please enter a valid question.", "processed_query": "N/A"}), 400
 
-        processed_query = preprocess_query(user_message)
+        # Preprocess query
+        processed_query, is_comparison = preprocess_query(user_message)
         print(f"Processed Query: {processed_query}")
 
+        # If user specifically says "recommend," add a directive.
         if "recommend" in user_message.lower():
             processed_query += " Please provide direct recommendations."
+
+        # If compare flow or is_comparison, add explicit side-by-side comparison instructions
+        if is_compare_flow or is_comparison:
+            # If user used the "Compare Now" fields, override processed_query with a direct compare statement
+            if is_compare_flow:
+                # Build a direct compare statement from the two inputs
+                processed_query = (
+                    f"Compare {compare_input_1} with {compare_input_2} in a side-by-side format. "
+                    "Focus on cost of living, real estate, schools, and any key differences. "
+                    "Please provide a direct comparison with bullet points."
+                )
+            else:
+                # If user typed something like "Compare X and Y" in the text box
+                processed_query += (
+                    " Please provide a direct side-by-side comparison of these two locations "
+                    "focusing on cost of living, real estate prices, crime rates, schools, "
+                    "job markets, and any key factors."
+                )
 
         prompt = f"""
         You are a helpful assistant that provides structured answers in Markdown.
@@ -295,7 +331,7 @@ def chat():
         response = openai.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "Format all responses using Markdown. Keep responses structured, readable, and include references. Do NOT add extra horizontal lines (---) anywhere in your response."},
+                {"role": "system", "content": "Format all responses using Markdown. Keep responses structured, readable, and include references. Do NOT add extra horizontal lines (---)."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.7,
@@ -309,6 +345,11 @@ def chat():
         bot_response = response.choices[0].message.content.strip()
         print("OpenAI Response (raw):")
         print(bot_response)
+
+        if is_compare_flow:
+            match = re.search(r"(?i)\*\*References:\*\*", bot_response)
+            if match:
+                bot_response = bot_response[:match.start()].strip()
 
         bot_response = re.sub(r'^[\s-]*---[\s-]*$', '', bot_response, flags=re.MULTILINE).strip()
 
@@ -325,10 +366,10 @@ def chat():
             main_response = bot_response.strip()
             references_text = ""
 
-        # 2) Extract the raw URLs from the references
+        # 2) Extract raw URLs
         raw_urls = re.findall(r'(https?://\S+)', references_text)
 
-        # 3) If GPT provided at least 3 URLs, just use them; otherwise try to fix them
+        # 3) If GPT provided at least 3 URLs, just use them; else fix them
         if len(raw_urls) >= 3:
             selected_urls = raw_urls[:3]
             references_html = """
@@ -337,23 +378,31 @@ def chat():
                     <div class="reference-buttons">
             """
             for url in selected_urls:
-                    url_clean = clean_url(url)
-                    display_text = get_display_text(url_clean)
-                    references_html += f'<a class="reference-button" href="{url_clean}" target="_blank" rel="noopener noreferrer">{display_text}</a>\n'
+                url_clean = clean_url(url)
+                display_text = get_display_text(url_clean)
+                references_html += f'<a class="reference-button" href="{url_clean}" target="_blank" rel="noopener noreferrer">{display_text}</a>\n'
             references_html += "</div></div>"
         else:
             validated_urls, ref_source = get_valid_references(raw_urls, processed_query)
             if len(validated_urls) == 3:
-                references_markdown = "**References:**<br>\n<div class=\"reference-links\">\n"
+                references_html = """
+                    <div class="references-container">
+                        <strong class="references-title">References:</strong>
+                        <div class="reference-buttons">
+                """
                 for url in validated_urls:
                     url_clean = clean_url(url)
                     display_text = get_display_text(url_clean)
-                    references_markdown += f'<a class="reference-button" href="{url_clean}" target="_blank" rel="noopener noreferrer">{display_text}</a>\n'
-                references_markdown += "</div>"
+                    references_html += f'<a class="reference-button" href="{url_clean}" target="_blank" rel="noopener noreferrer">{display_text}</a>\n'
+                references_html += "</div></div>"
             else:
-                references_markdown = "**References:**<br>\nNo valid references found.\n"
+                references_html = """
+                    <div class="references-container">
+                        <strong class="references-title">References:</strong>
+                        <p>No valid references found.</p>
+                    </div>
+                """
 
-        # 4) Return the main response and references SEPARATELY
         final_response = main_response.strip()
         final_references = references_html.strip()
 
@@ -364,8 +413,8 @@ def chat():
 
         return jsonify({
             "processed_query": processed_query,
-            "response": final_response,     # main body
-            "references": final_references  # references only
+            "response": final_response,
+            "references": final_references
         }), 200, {'Content-Type': 'text/html'}
 
     except Exception as e:
