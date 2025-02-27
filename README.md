@@ -62,4 +62,4 @@ This project is part of **MSDS 453: Natural Language Processing**, where we buil
 ## Run ▶️
 1. **Start the Flask Sever**
    ```bash
-   python app.py```
+   python app.py
