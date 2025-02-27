@@ -43,6 +43,27 @@ This project is part of **MSDS 453: Natural Language Processing**, where we buil
    source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 3. **Install Dependencies**
-  ```bash
-  pip install flask openai spacy nltk requests summarizer keybert flask-cors flask-limiter
+   ```bash
+   pip install flask openai spacy nltk requests summarizer keybert flask-cors flask-limiter
+
+4. **Set Your OpenAI API Key**
+- MacOS/Linux
+   ```bash
+   export OPENAI_API_KEY=your_key_here```
+- Windows
+   ```bash
+   set OPENAI_API_KEY=your_key_here```
+
+5. **Download spaCy Model (if not already installed)**
+   ```bash
+   python -m spacy download en_core_web_sm```
+
+---
+## Run ▶️
+1. **Start the Flask Sever**
+   ```bash
+   python app.py```
+
+
+
 
